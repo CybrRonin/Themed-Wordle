@@ -16,7 +16,7 @@ def main():
     mystery_word = word_list[randrange(list_size)]
 
     root = tk.Tk()
-    root.geometry('600x500')
+    root.geometry('600x550')
     root.title(f"{THEME} Wordle")
 
     guess_grid = ttk.Frame(root)
@@ -27,6 +27,8 @@ def main():
     keyboard = ttk.Frame(root)
     keyboard = init_buttons(keyboard)
     keyboard.pack()
+
+    root.bind("<Key>", key_handler)
 
     root.mainloop()
 
@@ -57,7 +59,7 @@ def configure_grid(master, guesses):
                 fg="#000000",
                 bg="#FFFFFF"
             )
-            guesses[i][j].grid(column=i, row=j, sticky=tk.EW, padx=5, pady=5)
+            guesses[i][j].grid(row=i, column=j, sticky=tk.EW, padx=5, pady=5)
     
     return master
 
@@ -76,8 +78,10 @@ def init_buttons(master):
     return master
 
 def click_button(text):
+    global guess
+    global letter
     print(text)
-"""
+
     if text == "Enter":
         submit_guess()
         return
@@ -86,11 +90,26 @@ def click_button(text):
             letter -= 1
             guesses[guess][letter].config(text = "")
         return
-    guesses[guess][letter].config(text = "text")
-    letter += 1
-"""
+    if letter < 5:
+        guesses[guess][letter].config(text = text)
+        letter += 1
 
 def submit_guess():
-    pass
+    global guess
+    global letter
+    print("Submitting guess...")
+    guess += 1
+    letter = 0
+
+def key_handler(event):
+    if event.char.upper() >= "A" and event.char.upper() <= "Z":
+        click_button(event.char.upper())
+        return
+    if event.keysym == "Return" or event.keysym == "KP_Enter":
+        click_button("Enter")
+        return
+    if event.keysym == "BackSpace":
+        click_button("<-")
+        return
 
 main()

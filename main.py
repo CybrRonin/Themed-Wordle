@@ -1,19 +1,31 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter.messagebox import showinfo
 from random import randrange
 from config import *
 from functools import partial
 
-dictionary = []
+dictionary = [] # list of words used to verify guesses are actual, English words
+word_list = [] # custom word list from which themed mystery words will be selected
 guesses = []
+buttons = {}
+guessed_words = []
 guess = 0
 letter = 0
+mystery_word = ""
 
 def main():
+    global dictionary, word_list, mystery_word
+
     dictionary = prepare_word_list(DICTIONARY_FILE)
     word_list = prepare_word_list(WORD_LIST)
+
+    dictionary.extend(word_list) # make sure custom word list is in the dictionary
+
     list_size = len(word_list)
-    mystery_word = word_list[randrange(list_size)]
+    mystery_word = word_list[randrange(list_size)].lower()
+
+    print(mystery_word)
 
     root = tk.Tk()
     root.geometry('600x550')
@@ -72,6 +84,7 @@ def init_buttons(master):
         for j in range(len(keys[i])):
             value = keys[i][j]
             btn = ttk.Button(row, text=value, width=5, command=partial(click_button, value))
+            buttons[value.lower()] = btn
             btn.pack(side=tk.LEFT)
         row.pack()
 
@@ -80,7 +93,6 @@ def init_buttons(master):
 def click_button(text):
     global guess
     global letter
-    print(text)
 
     if text == "Enter":
         submit_guess()
@@ -95,11 +107,65 @@ def click_button(text):
         letter += 1
 
 def submit_guess():
-    global guess
-    global letter
-    print("Submitting guess...")
+    global dictionary, guessed_words, mystery_word, guess, letter
+
+    # make a copy of the mystery word so I can manipulate it without changing the word
+    target = mystery_word 
+    style = ttk.Style()
+    style.configure("Correct.TButton", background="green", foreground="white")
+    style.configure("Misplaced.TButton", background="yellow")
+    style.configure("Wrong.TButton", background = "#404040", foreground="white")
+
+    guessed_word = construct_guess()
+    if len(guessed_word) < WORD_LENGTH:
+        showinfo(message = "Not enough letters")
+        return
+    
+    if guessed_word not in dictionary:
+        showinfo(message = "Not in word list")
+        return
+    
+    if guessed_word in guessed_words:
+        showinfo(message = "Already guessed")
+        return
+    
+    for i in range(WORD_LENGTH):
+        if guessed_word[i] == target [i]:
+            guesses[guess][i].config(bg="green", fg="white")
+            buttons[guessed_word[i]].config(style = "Correct.TButton")
+            # letter is matched up so replace it with a placeholder so it doesn't get compared in the next pass
+            guessed_word = guessed_word[:i] + "*" + guessed_word[i+1:]
+            target = target[:i] + "*" + target[i+1:]
+    
+    for i in range(WORD_LENGTH):
+        # if letter was correctly matched in the first pass skip it
+        if guessed_word[i] == "*":
+            continue
+        if guessed_word[i] in target:
+            guesses[guess][i].config(bg="yellow")
+            buttons[guessed_word[i]].config(style = "Misplaced.TButton")
+            # We've already flagged any characters that are correctly placed, so it doesn't matter which instance of a character is removed
+            # but we do want to remove one in case that letter is repeated
+            target = target.replace(guessed_word[i], "*", 1)
+        else:
+            guesses[guess][i].config(bg="#404040", fg="white")
+            btn = buttons[guessed_word[i]]
+            if btn.cget("style") != "Misplaced.TButton" and btn.cget("style") != "Correct.TButton":
+                btn.config(style = "Wrong.TButton")
+
+    if guessed_word == "*****":
+        showinfo(title="Congratulations!", message="You got it!")
+
+    guessed_words.append(guessed_word.lower())
     guess += 1
     letter = 0
+
+def construct_guess():
+    global guess
+    word = ""
+    for i in range(5):
+        word+=guesses[guess][i].cget("text")
+    return word.lower()
 
 def key_handler(event):
     if event.char.upper() >= "A" and event.char.upper() <= "Z":

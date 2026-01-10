@@ -133,7 +133,10 @@ def submit_guess():
     if guessed_word in guessed_words:
         showinfo(message = "Already guessed")
         return
-    
+
+    # Confirmed valid guess, so track the word as a guess before we make any changes to the string
+    guessed_words.append(guessed_word.lower())
+
     for i in range(WORD_LENGTH):
         if guessed_word[i] == target [i]:
             guesses[guess][i].config(bg="green", fg="white")
@@ -158,7 +161,6 @@ def submit_guess():
             if btn.cget("style") != "Misplaced.TButton" and btn.cget("style") != "Correct.TButton":
                 btn.config(style = "Wrong.TButton")
 
-    guessed_words.append(guessed_word.lower())
     guess += 1
     letter = 0
 

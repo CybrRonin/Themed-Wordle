@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter.messagebox import showinfo
+from tkinter.messagebox import askyesno, showinfo
 from random import randrange
 from config import *
 from functools import partial
 
+root = tk.Tk()
 dictionary = [] # list of words used to verify guesses are actual, English words
 word_list = [] # custom word list from which themed mystery words will be selected
 guesses = []
@@ -13,21 +14,11 @@ guessed_words = []
 guess = 0
 letter = 0
 mystery_word = ""
+THEME = ""
 
 def main():
-    global dictionary, word_list, mystery_word
+    setup()
 
-    dictionary = prepare_word_list(DICTIONARY_FILE)
-    word_list = prepare_word_list(WORD_LIST)
-
-    dictionary.extend(word_list) # make sure custom word list is in the dictionary
-
-    list_size = len(word_list)
-    mystery_word = word_list[randrange(list_size)].lower()
-
-    print(mystery_word)
-
-    root = tk.Tk()
     root.geometry('600x550')
     root.title(f"{THEME} Wordle")
 
@@ -44,9 +35,23 @@ def main():
 
     root.mainloop()
 
+def setup():
+    global dictionary, word_list, mystery_word
+
+    dictionary = prepare_word_list(DICTIONARY_FILE)
+    word_list = prepare_word_list(WORD_LIST)
+
+    dictionary.extend(word_list) # make sure custom word list is in the dictionary
+
+    list_size = len(word_list)
+    mystery_word = word_list[randrange(list_size)].lower()
+
 def prepare_word_list(list):
+    global THEME
     with open(list, "r") as file:
-        return file.read().lower().split()
+        words = file.read().split()
+        THEME = words[0]
+        return [word.lower() for word in words[1:]]
     
 def init_guesses(master):
     for i in range(MAX_GUESSES):
@@ -153,12 +158,24 @@ def submit_guess():
             if btn.cget("style") != "Misplaced.TButton" and btn.cget("style") != "Correct.TButton":
                 btn.config(style = "Wrong.TButton")
 
-    if guessed_word == "*****":
-        showinfo(title="Congratulations!", message="You got it!")
-
     guessed_words.append(guessed_word.lower())
     guess += 1
     letter = 0
+
+    if guessed_word == "*****":
+        answer = askyesno(title="Congratulations!", message="You got it! Would you like to try again?")
+        print(answer)
+        if answer:
+            reset()
+        else:
+            root.destroy()
+    elif guess == MAX_GUESSES:
+        answer = askyesno(message=f"You lost!\nThe word I was looking for was: {mystery_word}.\nWould you like to try again?")
+        if answer:
+            reset()
+        else:
+            root.destroy()
+          
 
 def construct_guess():
     global guess
@@ -177,5 +194,26 @@ def key_handler(event):
     if event.keysym == "BackSpace":
         click_button("<-")
         return
+
+def reset():
+    global mystery_word, guessed_words, guess, letter
+
+    #reset each label
+    for i in range(MAX_GUESSES):
+        for j in range(WORD_LENGTH):
+            guesses[i][j].config(text="", bg="white", fg="black")
+
+    style = ttk.Style()
+    style.configure("Reset.TButton", background="lightgray", foreground="black")
+
+    for button in buttons:
+        buttons[button].config(style="Reset.TButton")
+    
+    list_size = len(word_list)
+    mystery_word = word_list[randrange(list_size)].lower()
+
+    guessed_words = []
+    guess = 0
+    letter = 0
 
 main()
